@@ -224,7 +224,8 @@ function shiftDateBackByPeriod(date: Date, type: 'weekly' | 'monthly' | 'quarter
  * Get a periodic note (weekly, monthly, quarterly, yearly)
  * Tries multiple paths with both .md and .txt extensions
  */
-export function getPeriodicNote(params: z.infer<typeof getPeriodicNoteSchema>) {
+export function getPeriodicNote(params: z.infer<typeof getPeriodicNoteSchema>, options?: { autoCreate?: boolean }) {
+  const autoCreate = options?.autoCreate ?? true;
   try {
     const refDate = params.date ? new Date(params.date) : new Date();
     const currentYear = new Date().getFullYear();
@@ -328,22 +329,26 @@ export function getPeriodicNote(params: z.infer<typeof getPeriodicNoteSchema>) {
     }
 
     // Auto-create periodic notes when not found (same as daily calendar notes)
-    try {
-      const created = store.ensureCalendarNote(baseFilename, params.space);
-      if (created) {
-        return {
-          success: true,
-          note: {
-            title: created.title,
-            filename: created.filename,
-            content: created.content,
-            type: params.type,
-            displayName,
-          },
-        };
+    // Only when autoCreate is true (default) — disabled when called from getRecentPeriodicNotes
+    // to avoid creating empty notes for every missing past period
+    if (autoCreate) {
+      try {
+        const created = store.ensureCalendarNote(baseFilename, params.space);
+        if (created) {
+          return {
+            success: true,
+            note: {
+              title: created.title,
+              filename: created.filename,
+              content: created.content,
+              type: params.type,
+              displayName,
+            },
+          };
+        }
+      } catch {
+        // Fall through to error response
       }
-    } catch {
-      // Fall through to error response
     }
 
     return {
@@ -389,7 +394,7 @@ export function getRecentPeriodicNotes(params: z.infer<typeof getRecentPeriodicN
         type,
         date: dateToken,
         space: params.space,
-      });
+      }, { autoCreate: false });
 
       if (periodic.success && periodic.note) {
         const note = periodic.note as {

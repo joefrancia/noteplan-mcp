@@ -337,6 +337,7 @@ export function getPeriodicNote(params: z.infer<typeof getPeriodicNoteSchema>, o
         if (created) {
           return {
             success: true,
+            created: true,
             note: {
               title: created.title,
               filename: created.filename,
@@ -346,7 +347,8 @@ export function getPeriodicNote(params: z.infer<typeof getPeriodicNoteSchema>, o
             },
           };
         }
-      } catch {
+      } catch (err) {
+        console.error(`[noteplan-mcp] Failed to auto-create ${params.type} note ${baseFilename}:`, err);
         // Fall through to error response
       }
     }
